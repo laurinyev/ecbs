@@ -92,10 +92,11 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path], defi
     let mut parent_state = ParserState::StartOfLine;
     let mut last_char = '\0';
     let mut if_state = IfState::NotInIf;
+    let mut slash_prot = false;
     let mut iter = contents.chars();
     let mut pushback: Option<char> = None;
 
-    while let Some(c) = match pushback.take() { Some(v) => Some(v), None => iter.next()} {
+    while let Some(mut c) = match pushback.take() { Some(v) => Some(v), None => iter.next()} {
         if last_char == '\\' && c == '\n' {
             last_char = c;
             continue;
@@ -138,7 +139,7 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path], defi
                         ParserState::DirectivePragma    => false,
                         _ => true
                     }; // makes the output prettier but thechnically spec noncompliant
-                if last_char == '/' {
+                if last_char == '/' && !slash_prot  {
                     match c {
                         '/' => {
                             if should_space { 
@@ -156,11 +157,17 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path], defi
                             last_char = ' ';
                             continue;
                         },
-                        _ => print!("/")
+                        _ => {
+                            pushback = Some(c);
+                            c = '/';
+                            slash_prot = true;
+                        }
                     }
-                } else if c == '/' {
+                } else if c == '/' && !slash_prot {
                     last_char = c;
                     continue;
+                } else if slash_prot {
+                    slash_prot = false;
                 }
             }
         }

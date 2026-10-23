@@ -3,7 +3,7 @@
     #include <stdint.h>
 
 // Comment test 
-#define DUCKROLL "siiiiiiiix seeeeeeeeeeveeeeeeeen" // comments here tooooo \
+#define DUCKROLL "siiiiiiiix seeeeeeeeeeveeeeeeeen" // comments here tooooo
 /* this is a block comment: 
  * it wraps around to lines and shit
  * look at it go!!! 
@@ -33,6 +33,9 @@ char* rickroll(int really){
 #endif /* ifdef UNDEFINED ... else */
 
 int printf(const char* format, ...);
+
+#define LONG_AHH_CALCULATION 1 + 2 + 4 - 6 - 9 * 67 \
+                                - (int)(6 / 9) * (6 / 7)
 
 int main(int argc, char** argv) {
     float sixseven = 6 / 7;
