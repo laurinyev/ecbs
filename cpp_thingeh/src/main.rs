@@ -22,7 +22,7 @@ fn search_incl_paths(name: &str, path: &Path, paths: &[&Path], allow_rel: bool) 
     None
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 enum IncludeState {
     C, L, U, D, E, 
     WhiteSpacePre,
@@ -31,7 +31,7 @@ enum IncludeState {
     WhiteSpacePost
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 enum DefineState {
     E, F, I, N, E2,
     WhiteSpacePre,
@@ -40,7 +40,7 @@ enum DefineState {
 }
 
 // IfNDef & IfDef state 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 enum IfDefState {
     D, E, F,
     WhiteSpacePre,
@@ -48,7 +48,7 @@ enum IfDefState {
     WhiteSpacePost,
 }
 
-#[derive(Clone)]
+#[derive(Debug,Clone)]
 enum ParserState {
     StartOfLine,
     NonDirective,
@@ -80,7 +80,8 @@ enum CommentState {
 enum IfState {
     NotInIf,
     IfActive,
-    ElseActive
+    ElseActive,
+    InActiveElse
 }
 
 fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path], defines: &mut HashMap<String, String>) {
@@ -104,6 +105,7 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path], defi
             CommentState::LineComment => {
                 if c == '\n' {
                     comment_state = CommentState::NoComment;
+                    // Fallthrough to the statemachine so #define can get the newline
                 } else {
                     continue;
                 }
@@ -119,16 +121,37 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path], defi
                 continue;
             },
             CommentState::NoComment => {
+                let should_space = 
+                    do_forward && match state { 
+                        ParserState::StartOfLine        => false, 
+                        ParserState::DirectiveInclude(_)=> false, 
+                        ParserState::DirectiveDefine(_) => false, 
+                        ParserState::DirectiveIf        => false, 
+                        ParserState::DirectiveIfDef(_)  => false, 
+                        ParserState::DirectiveIfNDef(_) => false, 
+                        ParserState::DirectiveElif      => false, 
+                        ParserState::DirectiveElse      => false, 
+                        ParserState::DirectiveError     => false, 
+                        ParserState::DirectiveEndif     => false,
+                        ParserState::DirectiveLine      => false,
+                        ParserState::DirectiveUndef     => false,
+                        ParserState::DirectivePragma    => false,
+                        _ => true
+                    }; // makes the output prettier but thechnically spec noncompliant
                 if last_char == '/' {
                     match c {
                         '/' => {
-                            print!(" ");
+                            if should_space { 
+                                print!(" "); 
+                            }
                             comment_state = CommentState::LineComment;
                             last_char = ' ';
                             continue;
                         },
                         '*' => {
-                            print!(" ");
+                            if should_space {
+                                print!(" "); 
+                            }
                             comment_state = CommentState::BlockComment;
                             last_char = ' ';
                             continue;
@@ -144,11 +167,15 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path], defi
 
         match state {
             ParserState::StartOfLine => {
-                if if_state == IfState::NotInIf { do_forward = true }
+                if if_state == IfState::NotInIf || if_state == IfState::InActiveElse 
+                    { do_forward = true }
                 match c {
                     '#' => state = ParserState::Directive,
-                    '\n' => 
-                        if do_forward {print!("{c}")}, // double newline is still start of line
+                    ' ' | '\t' => (), // C99 allows whitespace before directives, this also removes
+                                      // indentation from the file but again, it will compile
+                    '\n' => (), // double newline is still start of line, but we'll only forward a
+                                // single newline: thechnically noncompliant, but I doubt it would
+                                // prevent anything from compiling lul
                     _   => {
                         if do_forward { print!("{c}") };
                         state = ParserState::NonDirective
@@ -368,7 +395,7 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path], defi
             },
             ParserState::DirectiveElse => {
                 if if_state == IfState::ElseActive {
-                    do_forward = true;
+                    if_state = IfState::InActiveElse;
                 }
                 state = ParserState::NonDirective;
             },

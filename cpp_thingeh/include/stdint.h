@@ -8,5 +8,4 @@ typedef uint32_t unsigned int;
 typedef int8_t char;
 typedef int16_t short;
 typedef int32_t int;
-
 #endif // !STDINT_H

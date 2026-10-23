@@ -1,17 +1,15 @@
 #define RICKROLL "Never Gonna Give You Up"
 #include <stdint.h>
-#include <stdint.h>
+    #include <stdint.h>
 
 // Comment test 
-#define DUCKROLL "siiiiiiiix seeeeeeeeeeveeeeeeeen" // comments here tooooo
-
+#define DUCKROLL "siiiiiiiix seeeeeeeeeeveeeeeeeen" // comments here tooooo \
 /* this is a block comment: 
  * it wraps around to lines and shit
  * look at it go!!! 
  * // Also a double-slash shouldn't modify the comment state
  */
 // /* not here either
-
 #ifdef UNDEFINED
 char* rickroll(int wat){
     switch (wat) {
@@ -33,3 +31,10 @@ char* rickroll(int really){
 }
 
 #endif /* ifdef UNDEFINED ... else */
+
+int printf(const char* format, ...);
+
+int main(int argc, char** argv) {
+    float sixseven = 6 / 7;
+    printf("%s %f %i", RICKROLL, sixseven, argc);
+}
