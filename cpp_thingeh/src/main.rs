@@ -21,6 +21,7 @@ fn search_incl_paths(name: &str, path: &Path, paths: &[&Path], allow_rel: bool) 
 
     None
 }
+
 #[derive(Clone, Copy)]
 enum IncludeState {
     C, L, U, D, E, 
@@ -50,23 +51,7 @@ enum ParserState {
     DirectivePragma,
 }
 
-fn main() {
-    let args = CmdLine::parse();
-    let file = Path::new(&args.file);
-
-    let contents = match fs::read_to_string(file) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("Error reading file: {e}");
-            return;
-        }
-    };
-
-    let incl_search_paths = [
-        Path::new("."),
-        Path::new("include")
-    ];
-
+fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path]) {
     let mut state = ParserState::StartOfLine;
     let do_forward = true;
     let mut working_string = String::new();
@@ -136,8 +121,6 @@ fn main() {
                     (IncludeState::D, 'd') => state = ParserState::DirectiveInclude(IncludeState::E),
                     (IncludeState::E, 'e') => state = ParserState::DirectiveInclude(IncludeState::WhiteSpacePre),
                   
-                    
-
                     // White space
                     (IncludeState::WhiteSpacePre,  ' ')  => (),
                     (IncludeState::WhiteSpacePre,  '\t') => (),
@@ -151,14 +134,14 @@ fn main() {
                     // The path     
                     
                     (IncludeState::PathAbsolute, '>') => {
-                        let file = match search_incl_paths(&working_string, file, &incl_search_paths, false) {
+                        let file = match search_incl_paths(&working_string, path, &incl_search_paths, false) {
                             Some(v) => v,
                             None    => {
                                 eprintln!("Error: header <{working_string}> not found!");
                                 return;
                             }
                         };
-                        let contents = match read_to_string(file) { //TODO: recursively process
+                        let contents = match read_to_string(&file) { //TODO: recursively process
                                                                     //these files
                             Ok(v)  => v,
                             Err(e) => {
@@ -166,27 +149,26 @@ fn main() {
                                 return;
                             }
                         };
-                        println!("{contents}");
+                        process_file(contents, &file, incl_search_paths);
                         working_string.clear();
                         state = ParserState::DirectiveInclude(IncludeState::WhiteSpacePost);
                     },
                     (IncludeState::PathRelative, '"') => {
-                        let file = match search_incl_paths(&working_string, file, &incl_search_paths, true) {
+                        let file = match search_incl_paths(&working_string, path, &incl_search_paths, true) {
                             Some(v) => v,
                             None    => {
                                 eprintln!("Error: header <{working_string}> not found!");
                                 return;
                             }
                         };
-                        let contents = match read_to_string(file) { //TODO: recursively process
-                                                                    //these files
+                        let contents = match read_to_string(&file) { 
                             Ok(v)  => v,
                             Err(e) => {
                                 eprintln!("Error: header <{working_string}> couldnt be read: {e}!");
                                 return;
                             }
                         };
-                        println!("{contents}");
+                        process_file(contents, &file, incl_search_paths);
                         working_string.clear();
                         state = ParserState::DirectiveInclude(IncludeState::WhiteSpacePost);
                     },
@@ -249,4 +231,24 @@ fn main() {
         }
     }
 
+}
+
+fn main() {
+    let args = CmdLine::parse();
+    let file = Path::new(&args.file);
+
+    let contents = match fs::read_to_string(file) {
+        Ok(v) => v,
+        Err(e) => {
+            println!("Error reading file: {e}");
+            return;
+        }
+    };
+
+    let incl_search_paths = [
+        Path::new("."),
+        Path::new("include")
+    ];
+
+    process_file(contents, file, &incl_search_paths);
 }
