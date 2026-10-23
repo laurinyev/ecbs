@@ -34,6 +34,7 @@ enum IncludeState {
 enum ParserState {
     StartOfLine,
     NonDirective,
+    Identifier,
     Directive,
     DirectiveI,
     DirectiveIf,
@@ -51,12 +52,71 @@ enum ParserState {
     DirectivePragma,
 }
 
+enum CommentState {
+    NoComment,
+    LineComment,
+    BlockComment
+}
+
 fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path]) {
+    let mut comment_state = CommentState::NoComment;
     let mut state = ParserState::StartOfLine;
     let do_forward = true;
     let mut working_string = String::new();
+    let mut parent_state = ParserState::StartOfLine;
+    let mut last_char = '\0';
 
     for c in contents.chars() {
+        if last_char == '\\' && c == '\n' {
+            last_char = c;
+            continue;
+        }
+
+        
+
+        match comment_state {
+            CommentState::LineComment => {
+                if c == '\n' {
+                    comment_state = CommentState::NoComment;
+                    state = ParserState::StartOfLine;
+                }
+                continue;
+            },
+            CommentState::BlockComment => {
+                if last_char == '*' && c == '/' {
+                    last_char = ' ';
+                    comment_state = CommentState::NoComment;
+                    continue;
+                }
+
+                last_char = c;
+                continue;
+            },
+            CommentState::NoComment => {
+                if last_char == '/' {
+                    match c {
+                        '/' => {
+                            print!(" ");
+                            comment_state = CommentState::LineComment;
+                            last_char = ' ';
+                            continue;
+                        },
+                        '*' => {
+                            print!(" ");
+                            comment_state = CommentState::BlockComment;
+                            last_char = ' ';
+                            continue;
+                        },
+                        _ => print!("/")
+                    }
+                } else if c == '/' {
+                    last_char = c;
+                    continue;
+                }
+            }
+        }
+
+
         match state {
             ParserState::StartOfLine => {
                 match c {
@@ -71,6 +131,15 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path]) {
                 if do_forward { print!("{c}") };
                 if c == '\n' { 
                     state = ParserState::StartOfLine;
+                }
+            },
+            ParserState::Identifier => {
+                match c {
+                    _ if c.is_alphanumeric() => working_string.push(c),
+                    _ => {
+                        state = parent_state;
+                        parent_state = ParserState::Identifier;
+                    }
                 }
             },
             ParserState::Directive => {
@@ -229,8 +298,12 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path]) {
                 state = ParserState::NonDirective; // TODO
             },
         }
+        last_char = c;
     }
 
+    if last_char != '\n' {
+        print!("\n");
+    }
 }
 
 fn main() {
