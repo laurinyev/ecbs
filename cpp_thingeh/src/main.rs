@@ -1,4 +1,4 @@
-use std::{fs::{self, read_to_string}, path::{Path, PathBuf}};
+use std::{collections::HashMap, fs::{self, read_to_string}, path::{Path, PathBuf}};
 use clap::{Parser};
 
 #[derive(Parser)]
@@ -22,7 +22,7 @@ fn search_incl_paths(name: &str, path: &Path, paths: &[&Path], allow_rel: bool) 
     None
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 enum IncludeState {
     C, L, U, D, E, 
     WhiteSpacePre,
@@ -31,6 +31,15 @@ enum IncludeState {
     WhiteSpacePost
 }
 
+#[derive(Clone)]
+enum DefineState {
+    E, F, I, N, E2,
+    WhiteSpacePre,
+    ContentStart,
+    Content(String),
+}
+
+#[derive(Clone)]
 enum ParserState {
     StartOfLine,
     NonDirective,
@@ -46,7 +55,7 @@ enum ParserState {
     DirectiveElse,
     DirectiveEndif,
     DirectiveError,
-    DirectiveDefine,
+    DirectiveDefine(DefineState),
     DirectiveUndef,
     DirectiveLine,
     DirectivePragma,
@@ -58,7 +67,7 @@ enum CommentState {
     BlockComment
 }
 
-fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path]) {
+fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path], defines: &mut HashMap<String, String>) {
     let mut comment_state = CommentState::NoComment;
     let mut state = ParserState::StartOfLine;
     let do_forward = true;
@@ -72,15 +81,13 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path]) {
             continue;
         }
 
-        
-
         match comment_state {
             CommentState::LineComment => {
                 if c == '\n' {
                     comment_state = CommentState::NoComment;
-                    state = ParserState::StartOfLine;
+                } else {
+                    continue;
                 }
-                continue;
             },
             CommentState::BlockComment => {
                 if last_char == '*' && c == '/' {
@@ -116,11 +123,12 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path]) {
             }
         }
 
-
         match state {
             ParserState::StartOfLine => {
                 match c {
                     '#' => state = ParserState::Directive,
+                    '\n' => 
+                        if do_forward {print!("{c}")}, // double newline is still start of line
                     _   => {
                         if do_forward { print!("{c}") };
                         state = ParserState::NonDirective
@@ -147,7 +155,7 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path]) {
                     ' ' | '\t' => (), // ISO C allows spaces and tabs between the # and the directive
                     'i' => state = ParserState::DirectiveI, 
                     'e' => state = ParserState::DirectiveE(false), 
-                    'd' => state = ParserState::DirectiveDefine, 
+                    'd' => state = ParserState::DirectiveDefine(DefineState::E), 
                     'u' => state = ParserState::DirectiveUndef, 
                     'l' => state = ParserState::DirectiveLine, 
                     'p' => state = ParserState::DirectivePragma,
@@ -210,15 +218,14 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path]) {
                                 return;
                             }
                         };
-                        let contents = match read_to_string(&file) { //TODO: recursively process
-                                                                    //these files
+                        let contents = match read_to_string(&file) {
                             Ok(v)  => v,
                             Err(e) => {
                                 eprintln!("Error: header <{working_string}> couldnt be read: {e}!");
                                 return;
                             }
                         };
-                        process_file(contents, &file, incl_search_paths);
+                        process_file(contents, &file, incl_search_paths, defines);
                         working_string.clear();
                         state = ParserState::DirectiveInclude(IncludeState::WhiteSpacePost);
                     },
@@ -237,7 +244,7 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path]) {
                                 return;
                             }
                         };
-                        process_file(contents, &file, incl_search_paths);
+                        process_file(contents, &file, incl_search_paths, defines);
                         working_string.clear();
                         state = ParserState::DirectiveInclude(IncludeState::WhiteSpacePost);
                     },
@@ -282,8 +289,47 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path]) {
 
             // Unambigupus ones: Define, Undef, Line & Pragma 
 
-            ParserState::DirectiveDefine => {
-                state = ParserState::NonDirective; // TODO
+            ParserState::DirectiveDefine(ref def_state) => {
+                match (def_state, c) {
+                    (DefineState::E,  'e') => state = ParserState::DirectiveDefine(DefineState::F),
+                    (DefineState::F,  'f') => state = ParserState::DirectiveDefine(DefineState::I),
+                    (DefineState::I,  'i') => state = ParserState::DirectiveDefine(DefineState::N),
+                    (DefineState::N,  'n') => state = ParserState::DirectiveDefine(DefineState::E2),
+                    (DefineState::E2, 'e') => state = ParserState::DirectiveDefine(DefineState::WhiteSpacePre),
+
+                    (DefineState::WhiteSpacePre, ' ')  => (), 
+                    (DefineState::WhiteSpacePre, '\t') => (), 
+                    (DefineState::WhiteSpacePre, _) => {
+                        if c.is_alphabetic() {
+                            working_string.push(c);
+                            parent_state = ParserState::DirectiveDefine(DefineState::ContentStart);
+                            state = ParserState::Identifier;
+                        } else {
+                            return;
+                        }
+                    }, 
+
+                    (DefineState::ContentStart, _) => {
+                        if c == '\n' {
+                            defines.insert(working_string.clone(), String::new());
+                        }
+                        state = ParserState::DirectiveDefine(DefineState::Content(working_string));
+                        working_string = String::new();
+                        working_string.push(c);
+                    }
+
+                    (DefineState::Content(s), _) => {
+                        if c == '\n' {
+                            defines.insert(s.clone(), working_string.clone());
+                            working_string.clear();
+                            state = ParserState::StartOfLine;
+                        } else {
+                            working_string.push(c);
+                        }
+                    }
+
+                    _ => state = ParserState::NonDirective
+                }
             },
 
             ParserState::DirectiveUndef => {
@@ -323,5 +369,9 @@ fn main() {
         Path::new("include")
     ];
 
-    process_file(contents, file, &incl_search_paths);
+    let mut defines = HashMap::<String, String>::new();
+
+    process_file(contents, file, &incl_search_paths, &mut defines);
+    
+    println!("Defines: {defines:?}");
 }
