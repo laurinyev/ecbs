@@ -75,7 +75,10 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path], defi
     let mut parent_state = ParserState::StartOfLine;
     let mut last_char = '\0';
 
-    for c in contents.chars() {
+    let mut iter = contents.chars();
+    let mut pushback: Option<char> = None;
+
+    while let Some(c) = match pushback.take() { Some(v) => Some(v), None => iter.next()} {
         if last_char == '\\' && c == '\n' {
             last_char = c;
             continue;
@@ -147,6 +150,7 @@ fn process_file(contents: String, path: &Path, incl_search_paths: &[&Path], defi
                     _ => {
                         state = parent_state;
                         parent_state = ParserState::Identifier;
+                        pushback = Some(c);
                     }
                 }
             },
