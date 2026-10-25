@@ -167,6 +167,7 @@ todozilla exclude
 | 11 | TZ011 | CONFIG_UNREADABLE | `TZ.yml` exists but cannot be read. |
 | 12 | TZ012 | CONFIG_INVALID | `TZ.yml` cannot be parsed or fails validation. |
 | 13 | TZ013 | CONFIG_WRITE_FAILED | `TZ.yml` cannot be written by `init`. |
+| 14 | TZ014 | CONFIG_ALREADY_EXISTS | `TZ.yml` already exists. |
 | 20 | TZ020 | MARKDOWN_NOT_FOUND | `TZ.md` does not exist. |
 | 21 | TZ021 | MARKDOWN_UNREADABLE | `TZ.md` exists but cannot be read. |
 | 22 | TZ022 | MARKDOWN_WRITE_FAILED | `TZ.md` cannot be written. |
