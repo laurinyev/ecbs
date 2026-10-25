@@ -1,3 +1,8 @@
+use std::path::Path;
+
+mod config;
+
 fn main() {
-    println!("Hello, world!");
+    let config = config::Config::new(&Path::new("./TZ.yml"));
+    println!("{config:?}");
 }

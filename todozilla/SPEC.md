@@ -3,6 +3,7 @@ TODOZilla is an experimental tool for managing markings like TODOs, BUGs, HACKs 
 
 ## Markings
 * Markings are the things TODOZilla tracks.
+* Valid markings are not preceded nor succeeded by alphabetic characters.
 * A marking is either unannotated or annotated.
 * An unannotated marking consists only of the category name. Any other text following it in the comment is not part of the marking.
 * An annotated marking consists of the category name immediately followed by a colon (`:`).
@@ -58,6 +59,11 @@ TZ.yml is the configuration file for TODOZilla.
 * Files with a configured extension anywhere beneath `base_dir` are searched.
 * The `.git` directory is ignored, symlinks are not followed, and files that cannot be read as UTF-8 are ignored.
 * File paths in generated headings and output are relative to `base_dir` and use forward slashes.
+
+### md_path
+* Optional.
+* Specifies the path of the markdown file relative to the base directory.
+* Default value is "TZ.md"
 
 ### markings_heading
 * Optional.

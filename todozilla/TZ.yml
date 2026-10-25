@@ -1,0 +1,21 @@
+comment_formats:
+    - ext: .rs
+      nlt_start: "//"
+      block_start: "/*"
+      block_end: "*/"
+    - ext: .yml
+      nlt_start: "#"
+categories:
+    - "TODO"
+    - "BUG"
+    - "HACK"
+    - "HACK HACK"
+    - "HACK HACK HACK"
+domains:
+    - CLI: src/main.rs
+    - Config parser: src/config.rs
+nesting_hierarchy: "fdc"
+base_dir: "."
+md_path: "TZ.md"
+markings_heading: "Code Markings"
+ephemeral_heading: "Ephemeral TODOs"
