@@ -1,4 +1,5 @@
 mod config;
+mod error;
 
 use std::{path::Path, process::ExitCode};
 use clap::{Parser, Subcommand};
@@ -18,29 +19,29 @@ struct CLI {
     cmd: Commands
 }
 
-fn init() {
+fn init() -> error::Result<()> {
     if Path::new("./TZ.yml").exists() {
-        eprintln!("there's already a TZ.yml file")
+        return error::error(error::ErrorCode::CONFIG_ALREADY_EXISTS, None)
     }
-    todo!("init command")
+    error::error(error::ErrorCode::INTERNAL, Some("init unimplemented".to_string()))
 }
 
-fn regen(config: Config) {
-    todo!("regen command")
+fn regen(config: Config) -> error::Result<()> {
+    error::error(error::ErrorCode::INTERNAL, Some("regen unimplemented".to_string()))
 }
 
-fn empty(config: Config) {
+fn empty(config: Config) -> error::Result<()> {
     if config.ephemeral_heading.is_none() {
-        eprintln!("the empty command requires Ephemeral TODOs to be enabled")
+        return error::error(error::ErrorCode::EPHEMERAL_DISABLED, None)
     }
-    todo!("empty command")
+    error::error(error::ErrorCode::INTERNAL, Some("empty unimplemented".to_string()))
 }
 
-fn exclude(config: Config) {
+fn exclude(config: Config) -> error::Result<()> {
     if config.ephemeral_heading.is_none() {
-        eprintln!("the exclude command requires Ephemeral TODOs to be enabled")
+        return error::error(error::ErrorCode::EPHEMERAL_DISABLED, None)
     }
-    todo!("exclude command")
+    error::error(error::ErrorCode::INTERNAL, Some("exclude unimplemented".to_string()))
 }
 
 fn main() -> ExitCode {
@@ -59,12 +60,16 @@ fn main() -> ExitCode {
 
     println!("{config:?}");
 
-    match args.cmd {
+    let result = match args.cmd {
         Commands::Init    => init(),
         Commands::Regen   => regen(config),
         Commands::Empty   => empty(config),
         Commands::Exclude => exclude(config),
+    };
+
+    match result {
+        Ok(_) => ExitCode::SUCCESS,
+        Err(e) => ExitCode::from(e.code() as u8)
     }
 
-    ExitCode::SUCCESS
 }
