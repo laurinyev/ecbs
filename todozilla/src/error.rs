@@ -1,3 +1,5 @@
+
+// WARNING: AI was used to create that macro
 macro_rules! define_error_codes {
     {
         $(

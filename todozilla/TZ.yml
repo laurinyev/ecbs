@@ -8,6 +8,7 @@ comment_formats:
 categories:
     - "TODO"
     - "BUG"
+    - "WARNING"
     - "HACK"
     - "HACK HACK"
     - "HACK HACK HACK"
