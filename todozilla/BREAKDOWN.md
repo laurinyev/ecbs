@@ -1,6 +1,7 @@
 # TODO breakdown
 * [ ] write the next few steps
-* [X] implement the init subcommand
-    - [X] config writing
-    - [X] prompts
-    - [X] file creation and filling
+* [ ] marking discovery
+    * [X] source file discovery
+    * [x] Domain attribution
+    * [ ] comment extraction(based on the correct comment format)
+    * [ ] marking parsing

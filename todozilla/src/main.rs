@@ -1,5 +1,6 @@
 mod config;
 mod error;
+mod marking;
 mod tui;
 
 use std::{io::Write, path::Path, process::ExitCode};
@@ -113,7 +114,9 @@ fn init() -> error::Result<()> {
 }
 
 fn regen(config: Config) -> error::Result<()> {
-    error::error(error::ErrorCode::INTERNAL, Some("regen unimplemented".to_string()))
+    let _ = marking::discover_markings(config);
+
+    Ok(())
 }
 
 fn empty(config: Config) -> error::Result<()> {
