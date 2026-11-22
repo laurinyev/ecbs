@@ -1,7 +1,8 @@
 # TODO breakdown
-* [ ] write the next few steps
+* [X] write the next few steps
+* [ ] quotation awareness
 * [ ] marking discovery
     * [X] source file discovery
     * [x] Domain attribution
-    * [ ] comment extraction(based on the correct comment format)
+    * [x] comment extraction(based on the correct comment format)
     * [ ] marking parsing
